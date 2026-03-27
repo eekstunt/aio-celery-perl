@@ -1,0 +1,36 @@
+# Perl build artifacts
+Makefile
+Makefile.old
+MYMETA.*
+META.*
+blib/
+pm_to_blib
+_build/
+Build
+*.o
+*.bs
+*.bak
+*~
+
+# Distribution
+AIO-Celery-*
+MANIFEST
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test/bench artifacts
+bench/.venv/
+bench/output/
+cover_db/
+nytprof.out
+
+# Environment
+.env

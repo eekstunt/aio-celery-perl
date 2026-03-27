@@ -1,0 +1,13 @@
+Revision history for AIO-Celery
+
+0.01  2026-03-27
+    - Initial release
+    - Full Celery Message Protocol v2 implementation
+    - RabbitMQ broker via Net::Async::AMQP
+    - Redis result backend via Net::Async::Redis
+    - Async worker with configurable concurrency (IO::Async + Future::AsyncAwait)
+    - Task chaining via Canvas signatures
+    - Task retry with configurable backoff
+    - HTTP inspection server for monitoring
+    - CLI worker: aio-celery worker Module::Name:variable
+    - Full interoperability with Python Celery/aio-celery

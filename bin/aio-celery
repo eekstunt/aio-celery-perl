@@ -1,0 +1,133 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use Getopt::Long qw(:config bundling);
+use Pod::Usage;
+use IO::Async::Loop;
+
+use lib 'lib';
+use AIO::Celery;
+use AIO::Celery::Worker;
+
+my $concurrency = 10_000;
+my $queues_str;
+my $loglevel = 'INFO';
+my $no_configure_logging = 0;
+my $show_version = 0;
+my $show_help = 0;
+
+GetOptions(
+    'c|concurrency=i'    => \$concurrency,
+    'Q|queues=s'         => \$queues_str,
+    'l|loglevel=s'       => \$loglevel,
+    'no-configure-logging' => \$no_configure_logging,
+    'V|version'          => \$show_version,
+    'h|help'             => \$show_help,
+) or pod2usage(2);
+
+if ($show_help) {
+    pod2usage(1);
+}
+
+if ($show_version) {
+    print "aio-celery-perl $AIO::Celery::VERSION\n";
+    exit 0;
+}
+
+my $subcommand = shift @ARGV;
+
+unless ($subcommand && $subcommand eq 'worker') {
+    die "Usage: aio-celery worker Module::Name:variable [OPTIONS]\n"
+      . "Run 'aio-celery --help' for more information.\n";
+}
+
+my $locator = shift @ARGV;
+unless ($locator) {
+    die "Usage: aio-celery worker Module::Name:variable [OPTIONS]\n";
+}
+
+if ($concurrency < 1) {
+    die "Concurrency must be >= 1, got: $concurrency\n";
+}
+
+# Configure logging unless suppressed
+unless ($no_configure_logging) {
+    require Log::Any::Adapter;
+    my %level_map = (
+        DEBUG    => 'debug',
+        INFO     => 'info',
+        WARNING  => 'warning',
+        ERROR    => 'error',
+        CRITICAL => 'critical',
+        FATAL    => 'critical',
+    );
+    my $level = $level_map{uc($loglevel)} // 'info';
+    Log::Any::Adapter->set('Stderr', log_level => $level);
+}
+
+# Parse queues
+my $queues;
+if (defined $queues_str) {
+    $queues = [split(/,/, $queues_str)];
+}
+
+# Run the worker
+my $loop = IO::Async::Loop->new;
+
+eval {
+    $loop->await(
+        AIO::Celery::Worker::run(
+            loop        => $loop,
+            locator     => $locator,
+            concurrency => $concurrency,
+            queues      => $queues,
+            loglevel    => $loglevel,
+        ),
+    );
+};
+if ($@) {
+    if ($@ =~ /interrupt/i || $@ =~ /SIGINT/) {
+        print STDERR "\nWorker stopped.\n";
+    } else {
+        die $@;
+    }
+}
+
+__END__
+
+=head1 NAME
+
+aio-celery - Async Celery worker for Perl
+
+=head1 SYNOPSIS
+
+    aio-celery worker Module::Name:variable [OPTIONS]
+
+=head1 OPTIONS
+
+    -c, --concurrency=N    Maximum simultaneous tasks (default: 10000)
+    -Q, --queues=LIST      Comma-separated queue names
+    -l, --loglevel=LEVEL   DEBUG|INFO|WARNING|ERROR|CRITICAL (default: INFO)
+    --no-configure-logging Skip default logging setup
+    -V, --version          Print version and exit
+    -h, --help             Show this help
+
+=head1 DESCRIPTION
+
+Starts an async Celery worker that consumes tasks from RabbitMQ queues
+and executes registered task functions.
+
+=head1 EXAMPLE
+
+    # Create myapp.pm:
+    package MyApp;
+    use AIO::Celery::App;
+    our $app = AIO::Celery::App->new(name => 'myapp');
+    $app->conf->update(broker_url => 'amqp://localhost');
+    $app->task(sub { $_[0] + $_[1] }, name => 'tasks.add');
+    1;
+
+    # Run the worker:
+    aio-celery worker MyApp:app -l INFO -Q celery
+
+=cut

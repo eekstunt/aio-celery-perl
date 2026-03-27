@@ -1,0 +1,34 @@
+# Version control
+\B\.git\b
+\B\.gitignore\b
+
+# Build tools
+^Makefile$
+^Makefile\.old$
+^MYMETA\.
+^blib/
+^pm_to_blib$
+^_build/
+^Build$
+
+# OS files
+\.DS_Store$
+Thumbs\.db$
+
+# IDE
+\.idea/
+\.vscode/
+\.swp$
+\.swo$
+
+# Benchmarks and test artifacts
+^bench/
+^cover_db/
+^nytprof\.out$
+
+# Distribution
+^AIO-Celery-
+^MANIFEST\.SKIP$
+
+# Environment
+^\.env$
